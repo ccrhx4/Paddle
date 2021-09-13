@@ -222,8 +222,8 @@ if(WITH_ROCM)
 endif()
 
  # Disable -Werror, otherwise the compile will fail for rocblas_gemm_ex
-if(WITH_ROCM)
-    string (REPLACE "-Werror" "-Wno-error" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
-    string (REPLACE "-Werror" "-Wno-error" CMAKE_C_FLAGS ${CMAKE_C_FLAGS})
-endif()
+ #if(WITH_ROCM)
+string (REPLACE "-Werror" "-Wno-error" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+string (REPLACE "-Werror" "-Wno-error" CMAKE_C_FLAGS ${CMAKE_C_FLAGS})
+ #endif()
 

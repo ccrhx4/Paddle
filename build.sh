@@ -1,0 +1,6 @@
+#!/bin/bash
+
+export PYTHON_INCLUDE_DIRS=/usr/include/x86_64-linux-gnu/python3.8
+export PYTHON_LIBRARY=/usr/lib/python3.8/config-3.8-x86_64-linux-gnu
+
+cmake .. -DPY_VERSION=3.8.10 -DPYTHON_INCLUDE_DIR=${PYTHON_INCLUDE_DIRS} -DPYTHON_LIBRARY=${PYTHON_LIBRARY} -DWITH_GPU=ON -DWITH_TESTING=OFF -DCMAKE_BUILD_TYPE=Release
