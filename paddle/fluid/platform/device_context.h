@@ -77,6 +77,12 @@ struct GpuDevice;
 #include "paddle/fluid/platform/npu_info.h"
 #endif
 
+#ifdef PADDLE_WITH_INTEL_GPU
+#include "dnnl.hpp"
+#include "dnnl_sycl.hpp"
+#include "paddle/fluid/platform/intelgpu/intel_device.h"
+#endif
+
 namespace paddle {
 namespace platform {
 
@@ -97,8 +103,9 @@ enum DeviceType {
   CUDA = 1,
   XPU = 2,
   NPU = 3,
+  INTELGPU = 4,
 
-  MAX_DEVICE_TYPES = 4,
+  MAX_DEVICE_TYPES = 5,
 };
 
 DeviceType Place2DeviceType(const platform::Place& place);
@@ -107,6 +114,7 @@ constexpr DeviceType kCPU = DeviceType::CPU;
 constexpr DeviceType kCUDA = DeviceType::CUDA;
 constexpr DeviceType kXPU = DeviceType::XPU;
 constexpr DeviceType kNPU = DeviceType::NPU;
+constexpr DeviceType kINTELGPU = DeviceType::INTELGPU;
 
 class DeviceContext {
  public:
@@ -805,6 +813,46 @@ class MKLDNNDeviceContext : public CPUDeviceContext {
   bool block_next_cache_clearing_ = false;
 };
 #endif
+
+class IntelGPUDeviceContext : public DeviceContext {
+ public:
+  explicit IntelGPUDeviceContext(IntelGPUPlace place);
+  virtual ~IntelGPUDeviceContext();
+  
+  Eigen::DefaultDevice* eigen_device() const { return nullptr; }
+  Place GetPlace() const override;
+
+  void Wait() const override;
+
+  const dnnl::engine& GetEngine();
+  const dnnl::stream& GetStream();
+
+  // void WaitStreamCallback() const { return stream_->WaitCallback(); }
+
+  // template <typename Callback>
+  // void AddStreamCallback(Callback&& callback) const {
+  //   return stream_->AddCallback(callback);
+  // }
+
+  // void WaitStreamCallback() const { return stream_->WaitCallback(); }
+
+ private:
+  IntelGPUPlace place_;
+  dpcpp::device curr_device;
+
+  std::unique_ptr<Eigen::DefaultDevice> eigen_device_;
+  std::unique_ptr<dpcpp::context> curr_context;
+  
+  std::shared_ptr<dnnl::engine> curr_engine_;
+  std::shared_ptr<dnnl::stream> curr_stream_;
+
+  DISABLE_COPY_AND_ASSIGN(IntelGPUDeviceContext);
+};
+
+template <>
+struct DefaultDeviceContextType<platform::IntelGPUPlace> {
+  using TYPE = IntelGPUDeviceContext;
+};
 
 /*! \brief device context pool singleton */
 class DeviceContextPool {

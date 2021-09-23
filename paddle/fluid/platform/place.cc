@@ -29,6 +29,11 @@ class PlacePrinter : public boost::static_visitor<> {
  public:
   explicit PlacePrinter(std::ostream &os) : os_(os) {}
   void operator()(const CPUPlace &) { os_ << "CPUPlace"; }
+  
+  void operator()(const IntelGPUPlace &p) {
+    os_ << "IntelGPUPlace(" << p.device << ")";
+  }
+
   void operator()(const CUDAPlace &p) {
     os_ << "CUDAPlace(" << p.device << ")";
   }
@@ -59,6 +64,12 @@ bool is_cpu_place(const Place &p) {
   return boost::apply_visitor(IsCPUPlace(), p);
 }
 
+bool is_intel_gpu_place(const Place &p) {
+  bool if_gpu_intel = boost::apply_visitor(IsIntelGPUPlace(), p);
+  std::cout << if_gpu_intel << std::endl;
+  return if_gpu_intel;
+}
+
 bool is_cuda_pinned_place(const Place &p) {
   return boost::apply_visitor(IsCUDAPinnedPlace(), p);
 }
@@ -79,6 +90,8 @@ bool is_same_place(const Place &p1, const Place &p2) {
       return BOOST_GET_CONST(XPUPlace, p1) == BOOST_GET_CONST(XPUPlace, p2);
     } else if (is_npu_place(p1)) {
       return BOOST_GET_CONST(NPUPlace, p1) == BOOST_GET_CONST(NPUPlace, p2);
+    } else if (is_intel_gpu_place(p1)) {
+      return BOOST_GET_CONST(IntelGPUPlace, p1) == BOOST_GET_CONST(IntelGPUPlace, p2);
     } else {
       return BOOST_GET_CONST(CUDAPlace, p1) == BOOST_GET_CONST(CUDAPlace, p2);
     }

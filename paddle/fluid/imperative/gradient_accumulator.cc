@@ -97,6 +97,16 @@ class TensorAddFunctor : public boost::static_visitor<> {
   }
 #endif
 
+#ifdef PADDLE_WITH_INTEL_GPU
+  // TODO: to implement Add on Intel GPU
+  void operator()(const platform::IntelGPUPlace& place) {
+    PADDLE_THROW(platform::errors::PermissionDenied(
+        "Gradient accumulation on place (%s) "
+        "is not supported in imperative mode",
+        place));
+  }
+#endif
+
 #if defined(PADDLE_WITH_CUDA) || defined(PADDLE_WITH_HIP)
   void operator()(const platform::CUDAPlace& place) {
     platform::CUDADeviceContext* ctx =

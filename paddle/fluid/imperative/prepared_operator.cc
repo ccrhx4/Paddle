@@ -130,6 +130,18 @@ PreparedOp PrepareImpl(const NameVarMap<VarType>& ins,
 
   auto& kernels = kernels_iter->second;
   auto kernel_iter = kernels.find(expected_kernel_key);
+
+#ifdef PADDLE_WITH_INTEL_GPU
+  if (is_intel_gpu_place(expected_kernel_key.place_) &&
+      (kernel_iter == kernels.end())) {
+    VLOG(3) << "missing intel GPU kernel: " << op.Type()
+            << ", expected_kernel_key:" << expected_kernel_key
+            << ", fallbacking to CPU one!";
+    expected_kernel_key.place_ = platform::CPUPlace();
+    kernel_iter = kernels.find(expected_kernel_key);
+  }
+#endif
+
 #ifdef PADDLE_WITH_XPU
   if (is_xpu_place(expected_kernel_key.place_) &&
       (kernel_iter == kernels.end() ||

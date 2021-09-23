@@ -34,6 +34,21 @@ struct CPUPlace {
   inline bool operator<(const CPUPlace &) const { return false; }
 };
 
+struct IntelGPUPlace {
+  IntelGPUPlace() : IntelGPUPlace(0) {}
+  explicit IntelGPUPlace(int d) : device(d) {}
+
+  inline int GetDeviceId() const { return device; }
+  inline bool operator==(const IntelGPUPlace &o) const {
+    return device == o.device;
+  }
+  inline bool operator!=(const IntelGPUPlace &o) const { return !(*this == o); }
+
+  inline bool operator<(const IntelGPUPlace &o) const { return device < o.device; }
+
+  int device;
+};
+
 struct CUDAPlace {
   CUDAPlace() : CUDAPlace(0) {}
   explicit CUDAPlace(int d) : device(d) {}
@@ -100,8 +115,18 @@ struct IsCUDAPlace : public boost::static_visitor<bool> {
   bool operator()(const NPUPinnedPlace &) const { return false; }
   bool operator()(const CUDAPlace &) const { return true; }
   bool operator()(const CUDAPinnedPlace &) const { return false; }
+  bool operator()(const IntelGPUPlace &) const { return false; }
 };
 
+struct IsIntelGPUPlace : public boost::static_visitor<bool> {
+  bool operator()(const CPUPlace &) const { return false; }
+  bool operator()(const XPUPlace &) const { return false; }
+  bool operator()(const NPUPlace &) const { return false; }
+  bool operator()(const NPUPinnedPlace &) const { return false; }
+  bool operator()(const CUDAPlace &) const { return false; }
+  bool operator()(const CUDAPinnedPlace &) const { return false; }
+  bool operator()(const IntelGPUPlace &) const { return true; }
+};
 struct IsCPUPlace : public boost::static_visitor<bool> {
   bool operator()(const CPUPlace &) const { return true; }
   bool operator()(const XPUPlace &) const { return false; }
@@ -109,6 +134,7 @@ struct IsCPUPlace : public boost::static_visitor<bool> {
   bool operator()(const NPUPinnedPlace &) const { return false; }
   bool operator()(const CUDAPlace &) const { return false; }
   bool operator()(const CUDAPinnedPlace &) const { return false; }
+  bool operator()(const IntelGPUPlace &) const { return false; }
 };
 
 struct IsCUDAPinnedPlace : public boost::static_visitor<bool> {
@@ -118,6 +144,7 @@ struct IsCUDAPinnedPlace : public boost::static_visitor<bool> {
   bool operator()(const NPUPinnedPlace &) const { return false; }
   bool operator()(const CUDAPlace &) const { return false; }
   bool operator()(const CUDAPinnedPlace &cuda_pinned) const { return true; }
+  bool operator()(const IntelGPUPlace &) const { return false; }
 };
 
 struct IsXPUPlace : public boost::static_visitor<bool> {
@@ -127,6 +154,7 @@ struct IsXPUPlace : public boost::static_visitor<bool> {
   bool operator()(const NPUPinnedPlace &) const { return false; }
   bool operator()(const CUDAPlace &) const { return false; }
   bool operator()(const CUDAPinnedPlace &) const { return false; }
+  bool operator()(const IntelGPUPlace &) const { return false; }
 };
 
 struct IsNPUPlace : public boost::static_visitor<bool> {
@@ -136,6 +164,9 @@ struct IsNPUPlace : public boost::static_visitor<bool> {
   bool operator()(const NPUPinnedPlace &) const { return false; }
   bool operator()(const CUDAPlace &) const { return false; }
   bool operator()(const CUDAPinnedPlace &) const { return false; }
+  
+  bool operator()(const IntelGPUPlace &) const { return false; }
+  
 };
 
 struct IsNPUPinnedPlace : public boost::static_visitor<bool> {
@@ -145,13 +176,16 @@ struct IsNPUPinnedPlace : public boost::static_visitor<bool> {
   bool operator()(const NPUPinnedPlace &) const { return true; }
   bool operator()(const CUDAPlace &) const { return false; }
   bool operator()(const CUDAPinnedPlace &) const { return false; }
+  bool operator()(const IntelGPUPlace &) const { return false; }
 };
 
 class Place : public boost::variant<CUDAPlace, XPUPlace, NPUPlace, CPUPlace,
-                                    CUDAPinnedPlace, NPUPinnedPlace> {
+                                    CUDAPinnedPlace, NPUPinnedPlace,
+				    IntelGPUPlace> {
  private:
   using PlaceBase = boost::variant<CUDAPlace, XPUPlace, NPUPlace, CPUPlace,
-                                   CUDAPinnedPlace, NPUPinnedPlace>;
+                                   CUDAPinnedPlace, NPUPinnedPlace,
+				   IntelGPUPlace>;
 
  public:
   Place() = default;
@@ -163,7 +197,7 @@ class Place : public boost::variant<CUDAPlace, XPUPlace, NPUPlace, CPUPlace,
       : PlaceBase(cuda_pinned_place) {}
   Place(const NPUPinnedPlace &npu_pinned_place)  // NOLINT
       : PlaceBase(npu_pinned_place) {}
-
+  Place(const IntelGPUPlace &intel_gpu_place) : PlaceBase(intel_gpu_place) {}  // NOLINT
   bool operator<(const Place &place) const {
     return PlaceBase::operator<(static_cast<const PlaceBase &>(place));
   }
@@ -174,6 +208,7 @@ class Place : public boost::variant<CUDAPlace, XPUPlace, NPUPlace, CPUPlace,
 
 using PlaceList = std::vector<Place>;
 
+bool is_intel_gpu_place(const Place &);
 bool is_gpu_place(const Place &);
 bool is_xpu_place(const Place &);
 bool is_npu_place(const Place &);
@@ -193,6 +228,10 @@ struct PlaceVisitorWrapper
 
   typename Visitor::result_type operator()(const CPUPlace &cpu) const {
     return visitor_(cpu);
+  }
+
+  typename Visitor::result_type operator()(const IntelGPUPlace &intelgpu) const {
+    return visitor_(intelgpu);
   }
 
   typename Visitor::result_type operator()(const XPUPlace &xpu) const {

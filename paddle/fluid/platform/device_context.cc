@@ -54,7 +54,11 @@ AllocationPtr Alloc(const platform::DeviceContext& dev_ctx, size_t size) {
         "Paddle can't use XPU device since it's not compiled with XPU,"
         "Please recompile or reinstall Paddle with XPU support."));
 #endif
-  } else {
+  } else if (platform::is_intel_gpu_place(place)) {
+     // TODO: intel gpu stream code
+     return Alloc(place, size);
+  } 
+  else {
     return Alloc(place, size);
   }
 }
@@ -82,6 +86,8 @@ DeviceType Place2DeviceType(const platform::Place& place) {
     return platform::DeviceType::CUDA;
   } else if (platform::is_xpu_place(place)) {
     return platform::DeviceType::XPU;
+  } else if (platform::is_intel_gpu_place(place)) {
+    return platform::DeviceType::INTELGPU;
   } else {
     PADDLE_THROW(platform::errors::Unavailable(
         "Unsupported place %s to convert into platform::DeviceType.", place));
@@ -93,6 +99,8 @@ DeviceContextPool* DeviceContextPool::pool = nullptr;
 platform::DeviceContext* DeviceContextPool::Get(const platform::Place& place) {
   VLOG(4) << "DeviceContextPool Get: " << place;
   auto it = device_contexts_.find(place);
+  std::cout << place << std::endl;
+
   if (it == device_contexts_.end()) {
     PADDLE_THROW(platform::errors::Unimplemented(
         "Place %s is not supported. Please check that your paddle compiles "
@@ -128,6 +136,7 @@ DeviceContextPool::DeviceContextPool(
     set.insert(p);
   }
   for (auto& p : set) {
+	  std::cout << p << std::endl;
     if (platform::is_cpu_place(p)) {
 #ifdef PADDLE_WITH_MKLDNN
       EmplaceDeviceContext<MKLDNNDeviceContext, CPUPlace>(&device_contexts_, p);
@@ -177,6 +186,16 @@ DeviceContextPool::DeviceContextPool(
           "WITH_ASCEND_CL "
           "option."));
 #endif
+    } else if (platform::is_intel_gpu_place(p)) {
+#ifdef PADDLE_WITH_INTEL_GPU
+	    std::cout << "place intel gpu" << std::endl;
+      EmplaceDeviceContext<IntelGPUDeviceContext, IntelGPUPlace>(
+          &device_contexts_, p);
+#else
+      PADDLE_THROW(platform::errors::Unimplemented(
+          "Intel GPU Place is not supported. Please re-compile with "
+          "WITH_INTEL_GPU "));
+#endif
     }
   }
 }
@@ -194,6 +213,28 @@ Eigen::DefaultDevice* CPUDeviceContext::eigen_device() const {
 }
 
 Place CPUDeviceContext::GetPlace() const { return place_; }
+
+#ifdef PADDLE_WITH_INTEL_GPU
+Place IntelGPUDeviceContext::GetPlace() const { return place_; }
+
+
+void IntelGPUDeviceContext::Wait() const {}
+
+const dnnl::engine& IntelGPUDeviceContext::GetEngine() { return *curr_engine_; }
+const dnnl::stream& IntelGPUDeviceContext::GetStream() { return *curr_stream_; }
+
+IntelGPUDeviceContext::~IntelGPUDeviceContext() {}
+
+IntelGPUDeviceContext::IntelGPUDeviceContext(IntelGPUPlace place): place_(place) {
+    int device_id = place.device;
+    std::vector<dpcpp::device> all_devices = GetAvailableDevices();
+    curr_device = all_devices[device_id]; //selected gpu device
+
+    curr_context.reset(new dpcpp::context(curr_device));
+    curr_engine_ = std::make_shared<dnnl::engine>(dnnl::sycl_interop::make_engine(curr_device, *curr_context));
+}
+
+#endif
 
 #ifdef PADDLE_WITH_XPU
 XPUDeviceContext::XPUDeviceContext() {

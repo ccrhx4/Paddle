@@ -220,6 +220,12 @@ T TensorGetElement(const framework::Tensor &self, size_t offset) {
   T b = static_cast<T>(0);
   if (platform::is_cpu_place(self.place())) {
     b = self.data<T>()[offset];
+  }else if (platform::is_intel_gpu_place(self.place())) {
+#ifdef PADDLE_INTEL_GPU
+    const T *a = self.data<T>();
+    auto p = BOOST_GET_CONST(platform::IntelGPUPlace, self.place());
+    paddle::memory::Copy(platform::CPUPlace(), &b, p, a + offset, sizeof(T));
+#endif
   } else if (platform::is_xpu_place(self.place())) {
 #ifdef PADDLE_WITH_XPU
     const T *a = self.data<T>();
@@ -299,6 +305,18 @@ void SetTensorFromPyArrayT(
       auto dst = self->mutable_data<T>(place);
       std::memcpy(dst, array.data(), array.nbytes());
     }
+  } else if (paddle::platform::is_intel_gpu_place(place)) {
+#ifdef PADDLE_WITH_INTEL_GPU
+    platform::Place tmp_place = place;
+    platform::XPUDeviceGuard guard(
+        BOOST_GET_CONST(platform::XPUPlace, tmp_place).device);
+    auto dst = self->mutable_data<T>(place);
+    xpu_memcpy(dst, array.data(), array.nbytes(),
+               XPUMemcpyKind::XPU_HOST_TO_DEVICE);  
+#else
+    PADDLE_THROW(platform::errors::PermissionDenied(
+        "Cannot use XPUPlace in CPU/GPU version, "
+        "Please recompile or reinstall Paddle with XPU support."));
   } else if (paddle::platform::is_xpu_place(place)) {
 #ifdef PADDLE_WITH_XPU
     // NOTE(wangxi): When copying data to the accelerator card,

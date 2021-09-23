@@ -205,6 +205,14 @@ void Tracer::TraceOp(const std::string& type, const NameVarBaseMap& ins,
       PADDLE_THROW(platform::errors::PreconditionNotMet(
           "PaddlePaddle should compile with NPU if use NPUPlace."));
 #endif
+    } else if (platform::is_intel_gpu_place(place)) {
+#ifdef PADDLE_WITH_INTEL_GPU
+      platform::SetIntelGPUDeviceId(
+          BOOST_GET_CONST(platform::IntelGPUPlace, place).device);
+#else
+      PADDLE_THROW(platform::errors::PreconditionNotMet(
+          "PaddlePaddle should compile with Intel GPU if use IntelGPUPlace."));
+#endif
     }
 
     OpBase::Run(*op, new_ins, outs, attrs, default_attrs, place);

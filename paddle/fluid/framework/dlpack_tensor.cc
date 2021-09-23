@@ -100,6 +100,13 @@ struct DLContextVisitor : public boost::static_visitor<::DLContext> {
         "platform::NPUPinnedPlace is not supported"));
   }
 
+  inline ::DLContext operator()(const platform::IntelGPUPlace &place) const {
+    ::DLContext ctx;
+    ctx.device_type = kDLGPU;
+    ctx.device_id = place.device;
+    return ctx;
+  }
+
   inline ::DLContext operator()(const platform::CUDAPlace &place) const {
 #if defined(PADDLE_WITH_CUDA) || defined(PADDLE_WITH_HIP)
     ::DLContext ctx;

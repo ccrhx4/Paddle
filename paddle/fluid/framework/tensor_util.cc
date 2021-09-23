@@ -541,6 +541,12 @@ class AnyVisitor : public boost::static_visitor<bool> {
                  const platform::CUDAPinnedPlace& cpu) const {
     return *out.data<bool>();
   }
+
+
+  bool GetResult(const framework::Tensor& out,
+                 const platform::IntelGPUPlace& intelgpu) const {
+    return GetResultHelper(out, intelgpu);
+  }
 };
 
 template <typename Predicate>
@@ -736,6 +742,10 @@ struct BothFalseVisitor : public boost::static_visitor<> {
 
   void VisitorImpl(const platform::NPUPlace& npu) const {
     // TODO(zhiqiu)
+  }
+
+  void VisitorImpl(const platform::IntelGPUPlace& intelgpu) const {
+    // TODO(huanxing)
   }
 
   void VisitorImpl(const platform::CPUPlace& cpu) const {

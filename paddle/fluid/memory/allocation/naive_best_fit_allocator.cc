@@ -488,6 +488,32 @@ BuddyAllocator *GetGPUBuddyAllocator(int gpu_id) {
 #endif
 
 template <>
+size_t Used<platform::IntelGPUPlace>(const platform::IntelGPUPlace &place) {
+  PADDLE_THROW(platform::errors::PermissionDenied(
+      "'IntelGPUPlace' is not yet supported."));
+}
+
+template <>
+void* Alloc<platform::IntelGPUPlace>(const platform::IntelGPUPlace &place,
+		                     size_t size) {
+  PADDLE_THROW(platform::errors::PermissionDenied(
+      "'IntelGPUPlace' is not yet supported."));
+}
+
+template <>
+void Free<platform::IntelGPUPlace>(const platform::IntelGPUPlace &place, void *p,
+                              size_t size) {
+    PADDLE_THROW(platform::errors::PermissionDenied(
+      "'IntelGPUPlace' is not yet supported."));
+}
+
+template <>
+uint64_t Release<platform::IntelGPUPlace>(const platform::IntelGPUPlace &place) {
+   PADDLE_THROW(platform::errors::PermissionDenied(
+      "'IntelGPUPlace' is not yet supported."));
+}
+
+template <>
 size_t Used<platform::CUDAPlace>(const platform::CUDAPlace &place) {
 #if (defined PADDLE_WITH_CUDA || defined PADDLE_WITH_HIP)
   return GetGPUBuddyAllocator(place.device)->Used();

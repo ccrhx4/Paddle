@@ -122,6 +122,10 @@ limitations under the License. */
 #include "paddle/fluid/platform/xpu/xpu_info.h"
 #endif
 
+#ifdef PADDLE_WITH_INTEL_GPU
+#include "paddle/fluid/platform/intelgpu/intel_device.h"
+#endif
+
 #ifdef PADDLE_WITH_CRYPTO
 #include "paddle/fluid/pybind/crypto.h"
 #endif
@@ -664,6 +668,10 @@ PYBIND11_MODULE(core_noavx, m) {
            })
       .def("_alloc_float",
            [](framework::Tensor &self, paddle::platform::NPUPlace &place) {
+             self.mutable_data<float>(place);
+           })
+      .def("_alloc_float",
+           [](framework::Tensor &self, paddle::platform::IntelGPUPlace &place) {
              self.mutable_data<float>(place);
            })
       .def("_alloc_double",
@@ -1582,6 +1590,14 @@ All parameter, weight, gradient are variables in Paddle.
       .def("__repr__", string::to_string<const platform::CUDAPlace &>)
       .def("__str__", string::to_string<const platform::CUDAPlace &>);
 
+  py::class_<platform::IntelGPUPlace>(m, "IntelGPUPlace", R"DOC(
+   )DOC")
+      .def("__init__",
+		      [](platform::IntelGPUPlace &self, int dev_id) {
+            new (&self) platform::IntelGPUPlace(dev_id);
+	    })
+      .def("_type", &PlaceIndex<platform::IntelGPUPlace>);
+
   py::class_<platform::XPUPlace>(m, "XPUPlace", R"DOC(
     **Note**:
     Examples:
@@ -1813,6 +1829,10 @@ All parameter, weight, gradient are variables in Paddle.
              self = cpu_place;
            })
       .def("set_place",
+           [](platform::Place &self, const platform::IntelGPUPlace &intel_gpu_place) {
+             self = intel_gpu_place;
+           })
+      .def("set_place",
            [](platform::Place &self, const platform::XPUPlace &xpu_place) {
              self = xpu_place;
            })
@@ -1850,6 +1870,12 @@ All parameter, weight, gradient are variables in Paddle.
       .def("run",
            [](OperatorBase &self, const Scope &scope,
               const platform::CPUPlace &place) {
+             pybind11::gil_scoped_release release;
+             self.Run(scope, place);
+           })
+      .def("run",
+           [](OperatorBase &self, const Scope &scope,
+              const platform::IntelGPUPlace &place) {
              pybind11::gil_scoped_release release;
              self.Run(scope, place);
            })

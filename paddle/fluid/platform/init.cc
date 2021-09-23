@@ -34,6 +34,10 @@ limitations under the License. */
 #include "paddle/fluid/platform/xpu/xpu_info.h"
 #endif
 
+#ifdef PADDLE_WITH_INTEL_GPU
+#include "paddle/fluid/platform/intelgpu/intel_device.h"
+#endif
+
 #ifdef WITH_WIN_DUMP_DBG
 #include <stdio.h>
 #include <time.h>
@@ -134,7 +138,12 @@ void InitDevices() {
 #endif
   /*Init all available devices by default */
   std::vector<int> devices;
-#if defined(PADDLE_WITH_CUDA) || defined(PADDLE_WITH_HIP)
+
+#if defined(PADDLE_WITH_MKLDNN)
+  devices = platform::GetIntelSelectedDevices();
+#endif
+
+#if defined(PADDLE_WITH_CUDA) && !defined(PADDLE_WITH_MKLDNN)
   try {
     // use user specified GPUs in single-node multi-process mode.
     devices = platform::GetSelectedDevices();
@@ -174,6 +183,9 @@ void InitDevices(const std::vector<int> devices) {
       LOG(WARNING) << "Invalid devices id.";
       continue;
     }
+#ifdef PADDLE_WITH_INTEL_GPU
+    places.emplace_back(platform::IntelGPUPlace(devices[i]));
+#endif
 
 #if defined(PADDLE_WITH_CUDA) || defined(PADDLE_WITH_HIP)
     places.emplace_back(platform::CUDAPlace(devices[i]));

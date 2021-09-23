@@ -144,36 +144,36 @@ def _convert_to_place(device):
         avaliable_gpu_device = re.match(r'gpu:\d+', lower_device)
         avaliable_xpu_device = re.match(r'xpu:\d+', lower_device)
         avaliable_npu_device = re.match(r'npu:\d+', lower_device)
-        if not avaliable_gpu_device and not avaliable_xpu_device and not avaliable_npu_device:
+        available_intel_gpu_devices = re.match(r'intelgpu:\d+',lower_device)
+
+        if not available_intel_gpu_devices and not avaliable_gpu_device and not avaliable_xpu_device and not avaliable_npu_device:
             raise ValueError(
-                "The device must be a string which is like 'cpu', 'gpu', 'gpu:x', 'xpu', 'xpu:x', 'npu' or 'npu:x'"
+                    "The device must be a string which is like 'cpu', 'intelgpu:x', 'gpu', 'gpu:x', 'xpu', 'xpu:x', 'npu' or 'npu:x'"
             )
+
+        device_info_list = device.split(':', 1)
+        device_id = device_info_list[1]
+        device_id = int(device_id)
+
+        if available_intel_gpu_devices:
+            place = core.IntelGPUPlace(device_id)
         if avaliable_gpu_device:
             if not core.is_compiled_with_cuda():
                 raise ValueError(
                     "The device should not be {}, since PaddlePaddle is "
                     "not compiled with CUDA".format(avaliable_gpu_device))
-            device_info_list = device.split(':', 1)
-            device_id = device_info_list[1]
-            device_id = int(device_id)
             place = core.CUDAPlace(device_id)
         if avaliable_xpu_device:
             if not core.is_compiled_with_xpu():
                 raise ValueError(
                     "The device should not be {}, since PaddlePaddle is "
                     "not compiled with XPU".format(avaliable_xpu_device))
-            device_info_list = device.split(':', 1)
-            device_id = device_info_list[1]
-            device_id = int(device_id)
             place = core.XPUPlace(device_id)
         if avaliable_npu_device:
             if not core.is_compiled_with_npu():
                 raise ValueError(
                     "The device should not be {}, since PaddlePaddle is "
                     "not compiled with NPU".format(avaliable_npu_device))
-            device_info_list = device.split(':', 1)
-            device_id = device_info_list[1]
-            device_id = int(device_id)
             place = core.NPUPlace(device_id)
     return place
 

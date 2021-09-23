@@ -99,6 +99,13 @@ if(WITH_XPU)
     add_definitions(-DPADDLE_WITH_XPU)
 endif()
 
+if(WITH_INTEL_GPU)
+	message(STATUS "Compile with Intel GPU!")
+	add_definitions(-DPADDLE_WITH_INTEL_GPU)
+        add_library(dpcpp_library SHARED IMPORTED)
+	set_target_properties(dpcpp_library PROPERTIES IMPORTED_LOCATION ${dpcpp_lib_path})
+endif()
+
 if(WITH_GPU)
     add_definitions(-DPADDLE_WITH_CUDA)
     add_definitions(-DEIGEN_USE_GPU)

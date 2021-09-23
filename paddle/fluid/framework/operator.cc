@@ -44,6 +44,10 @@ class LoDTensor;
 #include "paddle/fluid/platform/mkldnn_helper.h"
 #endif
 
+#ifdef PADDLE_WITH_INTEL_GPU
+#include "paddle/fluid/platform/intelgpu/intel_device.h"
+#endif
+
 DECLARE_bool(benchmark);
 DECLARE_bool(check_nan_inf);
 DECLARE_bool(enable_unused_var_check);
@@ -219,6 +223,16 @@ void OperatorBase::Run(const Scope& scope, const platform::Place& place) {
 #else
       auto dev_id = BOOST_GET_CONST(platform::NPUPlace, place).device;
       platform::SetNPUDeviceId(dev_id);
+#endif
+    } else if (platform::is_intel_gpu_place(place)) {
+#ifndef PADDLE_WITH_INTEL_GPU
+      PADDLE_THROW(platform::errors::Unavailable(
+          "Cannot run operator on place %s, please recompile paddle or "
+          "reinstall Paddle with Intel GPU support.",
+          place));
+#else
+      auto dev_id = BOOST_GET_CONST(platform::IntelGPUPlace, place).device;
+      platform::SetIntelGPUDeviceId(dev_id);
 #endif
     }
 
@@ -1263,6 +1277,14 @@ void OperatorWithKernel::ChooseKernel(const RuntimeContext& ctx,
     kernel_iter = kernels.find(expected_kernel_key);
   }
 #endif
+  if (is_intel_gpu_place(expected_kernel_key.place_) &&
+      (kernel_iter == kernels.end())) {
+    VLOG(3) << "missing Intel GPU kernel: " << type_
+            << ", expected_kernel_key:" << expected_kernel_key
+            << ", fallbacking to CPU one!";
+    expected_kernel_key.place_ = platform::IntelGPUPlace();
+    kernel_iter = kernels.find(expected_kernel_key);
+  }
 #ifdef PADDLE_WITH_XPU
   if (is_xpu_place(expected_kernel_key.place_) &&
       (kernel_iter == kernels.end() ||

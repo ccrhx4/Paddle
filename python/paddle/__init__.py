@@ -252,6 +252,7 @@ from .framework import CPUPlace  # noqa: F401
 from .framework import CUDAPlace  # noqa: F401
 from .framework import NPUPlace  # noqa: F401
 from .framework import CUDAPinnedPlace  # noqa: F401
+from .framework import IntelGPUPlace
 
 from .framework import grad  # noqa: F401
 from .framework import no_grad  # noqa: F401
@@ -519,5 +520,6 @@ __all__ = [  # noqa
            'standard_normal',
            'diagonal',
            'broadcast_tensors',
-           'einsum'
+           'einsum',
+           'IntelGPUPlace'
 ]

@@ -6340,7 +6340,7 @@ def _get_paddle_place(place):
     if place is None:
         return place
     if isinstance(place, (core.Place, core.XPUPlace, core.CPUPlace,
-                          core.CUDAPinnedPlace, core.CUDAPlace, core.NPUPlace)):
+                          core.CUDAPinnedPlace, core.CUDAPlace, core.NPUPlace, core.IntelGPUPlace)):
         return place
 
     if not isinstance(place, str):
@@ -6394,6 +6394,13 @@ def _get_paddle_place(place):
         device_id = place_info_list[1]
         device_id = int(device_id)
         return core.NPUPlace(device_id)
+
+    avaliable_intel_gpu_place = re.match(r'intelgpu:\d+', place)
+    if avaliable_intel_gpu_place:
+        place_info_list = place.split(':', 1)
+        device_id = place_info_list[1]
+        device_id = int(device_id)
+        return core.IntelGPUPlace(device_id)
 
     raise ValueError(
         "Paddle supports CPUPlace, CUDAPlace,CUDAPinnedPlace, XPUPlace and NPUPlace, but received {}.".

@@ -68,6 +68,10 @@ ENDIF()
 cc_library(place SRCS place.cc DEPS enforce boost)
 cc_test(place_test SRCS place_test.cc DEPS place glog gflags)
 
+if(WITH_INTEL_GPU)
+    cc_library(intel_device SRCS intelgpu/intel_device.cc DEPS gflags glog enforce dpcpp_library)
+endif()
+
 if(WITH_XPU)
 cc_library(xpu_info SRCS xpu/xpu_info.cc DEPS gflags glog enforce xpulib)
 cc_library(xpu_op_list SRCS xpu/xpu_op_list.cc DEPS gflags glog enforce xpulib device_context)
@@ -106,6 +110,12 @@ ELSE()
     set(MKLDNN_CTX_DEPS)
 ENDIF()
 
+if(WITH_INTEL_GPU)
+  set(INTEL_GPU_DEPS intel_device)
+ELSE()
+  set(INTEL_GPU_DEPS)
+endif(WITH_INTEL_GPU)
+
 IF(WITH_ASCEND_CL)
 cc_library(stream_callback_manager SRCS stream_callback_manager.cc DEPS simple_threadpool enforce)
 ENDIF()
@@ -135,7 +145,7 @@ cc_library(cudnn_workspace_helper SRCS cudnn_workspace_helper.cc DEPS boost)
 # avoiding cycle dependencies
 cc_library(device_context SRCS device_context.cc init.cc DEPS simple_threadpool malloc xxhash ${STREAM_CALLBACK_DEPS}
     place eigen3 stringpiece cpu_helper cpu_info framework_proto ${GPU_CTX_DEPS} ${NPU_CTX_DEPS} ${MKLDNN_CTX_DEPS}
-    ${dgc_deps} dlpack cudnn_workspace_helper ${XPU_CTX_DEPS})
+    ${dgc_deps} dlpack cudnn_workspace_helper ${XPU_CTX_DEPS} ${INTEL_GPU_DEPS})
 
 cc_library(collective_helper SRCS collective_helper.cc collective_helper_npu.cc gen_comm_id_helper.cc DEPS framework_proto  device_context enforce)
 
