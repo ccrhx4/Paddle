@@ -194,6 +194,14 @@ bool IsCompiledWithMKLDNN() {
 #endif
 }
 
+bool IsCompiledWithIntelGPU() {
+#ifndef PADDLE_WITH_INTEL_GPU
+  return false;
+#else
+  return true;
+#endif
+}
+
 bool IsCompiledWithHETERPS() {
 #ifndef PADDLE_WITH_HETERPS
   return false;
@@ -695,6 +703,11 @@ PYBIND11_MODULE(core_noavx, m) {
               paddle::platform::CUDAPinnedPlace &place) {
              self.mutable_data<int>(place);
            })
+      .def("_alloc_int",
+           [](framework::Tensor &self,
+              paddle::platform::IntelGPUPlace &place) {
+             self.mutable_data<int>(place);
+           })
       .def("_alloc_float",
            [](framework::Tensor &self,
               paddle::platform::CUDAPinnedPlace &place) {
@@ -728,6 +741,8 @@ PYBIND11_MODULE(core_noavx, m) {
            })
       .def("set", SetTensorFromPyArray<paddle::platform::CPUPlace>,
            py::arg("array"), py::arg("place"), py::arg("zero_copy") = false)
+      .def("set", SetTensorFromPyArray<paddle::platform::IntelGPUPlace>,
+           py::arg("array"), py::arg("place"), py::arg("zero_copy") = false)
       .def("set", SetTensorFromPyArray<paddle::platform::XPUPlace>,
            py::arg("array"), py::arg("place"), py::arg("zero_copy") = false)
       .def("set", SetTensorFromPyArray<paddle::platform::CUDAPlace>,
@@ -741,7 +756,7 @@ PYBIND11_MODULE(core_noavx, m) {
         
         Args:
           lod (numpy.ndarray): The data to set.
-          place (CPUPlace|CUDAPlace|XPUPlace|CUDAPinnedPlace|NPUPlace): The place where the
+          place (CPUPlace|CUDAPlace|XPUPlace|CUDAPinnedPlace|NPUPlace|IntelGPUPlace): The place where the
           LoDTensor is to be set.
           zero_copy (bool, optional): Whether to share memory with the input numpy array.
           This parameter only works with CPUPlace. Default: False.
@@ -1469,6 +1484,18 @@ All parameter, weight, gradient are variables in Paddle.
                     return new paddle::platform::XPUDeviceContext(place);
 #endif
                   })
+      .def_static("create",
+                  [](paddle::platform::IntelGPUPlace& place)
+                      -> paddle::platform::DeviceContext* {
+#ifndef PADDLE_WITH_INTEL_GPU
+             PADDLE_THROW(
+                 platform::errors::PermissionDenied(
+                 "Cannot use IntelGPUPlace in CPU/GPU version, "
+                 "Please recompile or reinstall Paddle with Intel GPU support."));
+#else
+                    return new paddle::platform::IntelGPUDeviceContext(place);
+#endif
+                  })
         .def_static("create",
                     [](paddle::platform::NPUPlace& place)
                         -> paddle::platform::DeviceContext* {
@@ -1582,6 +1609,7 @@ All parameter, weight, gradient are variables in Paddle.
       .def("_equals", &IsSamePlace<platform::CUDAPlace, platform::CPUPlace>)
       .def("_equals", &IsSamePlace<platform::CUDAPlace, platform::XPUPlace>)
       .def("_equals", &IsSamePlace<platform::CUDAPlace, platform::NPUPlace>)
+      .def("_equals", &IsSamePlace<platform::CUDAPlace, platform::IntelGPUPlace>)
       .def("_equals",
            &IsSamePlace<platform::CUDAPlace, platform::CUDAPinnedPlace>)
       .def("_get_device_id",
@@ -1597,7 +1625,22 @@ All parameter, weight, gradient are variables in Paddle.
             new (&self) platform::IntelGPUPlace(dev_id);
 	    })
       .def("_type", &PlaceIndex<platform::IntelGPUPlace>);
-
+#if defined(PADDLE_WITH_INTEL_GPU)
+      .def("get_device_id",
+           [](const platform::IntelGPUPlace &self) { return self.GetDeviceId(); })
+      .def("_equals", &IsSamePlace<platform::IntelGPUPlace, platform::Place>)
+      .def("_equals", &IsSamePlace<platform::IntelGPUPlace, platform::CUDAPlace>)
+      .def("_equals", &IsSamePlace<platform::IntelGPUPlace, platform::CPUPlace>)
+      .def("_equals", &IsSamePlace<platform::IntelGPUPlace, platform::XPUPlace>)
+      .def("_equals", &IsSamePlace<platform::IntelGPUPlace, platform::NPUPlace>)
+      .def("_equals", &IsSamePlace<platform::IntelGPUPlace, platform::IntelGPUPlace>)
+      .def("_equals",
+           &IsSamePlace<platform::IntelGPUPlace, platform::CUDAPinnedPlace>)
+      .def("_get_device_id",
+           [](platform::IntelGPUPlace &self) -> int { return self.GetDeviceId(); })
+#endif
+      .def("__repr__", string::to_string<const platform::IntelGPUPlace &>)
+      .def("__str__", string::to_string<const platform::IntelGPUPlace &>);
   py::class_<platform::XPUPlace>(m, "XPUPlace", R"DOC(
     **Note**:
     Examples:
@@ -1649,6 +1692,7 @@ All parameter, weight, gradient are variables in Paddle.
       .def("_equals", &IsSamePlace<platform::XPUPlace, platform::CUDAPlace>)
       .def("_equals", &IsSamePlace<platform::XPUPlace, platform::CPUPlace>)
       .def("_equals", &IsSamePlace<platform::XPUPlace, platform::XPUPlace>)
+      .def("_equals", &IsSamePlace<platform::XPUPlace, platform::IntelGPUPlace>)
       .def("_equals",
            &IsSamePlace<platform::XPUPlace, platform::CUDAPinnedPlace>)
       .def("get_device_id",
@@ -1684,6 +1728,7 @@ All parameter, weight, gradient are variables in Paddle.
       .def("_equals", &IsSamePlace<platform::CPUPlace, platform::NPUPlace>)
       .def("_equals", &IsSamePlace<platform::CPUPlace, platform::CUDAPlace>)
       .def("_equals", &IsSamePlace<platform::CPUPlace, platform::CPUPlace>)
+      .def("_equals", &IsSamePlace<platform::CPUPlace, platform::IntelGPUPlace>)
       .def("_equals",
            &IsSamePlace<platform::CPUPlace, platform::CUDAPinnedPlace>)
       .def("__repr__", string::to_string<const platform::CPUPlace &>)
@@ -1715,6 +1760,7 @@ All parameter, weight, gradient are variables in Paddle.
            })
       .def("_type", &PlaceIndex<platform::CUDAPinnedPlace>)
       .def("_equals", &IsSamePlace<platform::CUDAPinnedPlace, platform::Place>)
+      .def("_equals", &IsSamePlace<platform::CUDAPinnedPlace, platform::IntelGPUPlace>)
       .def("_equals",
            &IsSamePlace<platform::CUDAPinnedPlace, platform::CUDAPlace>)
       .def("_equals",
@@ -1798,6 +1844,7 @@ All parameter, weight, gradient are variables in Paddle.
       .def("_equals", &IsSamePlace<platform::Place, platform::XPUPlace>)
       .def("_equals", &IsSamePlace<platform::Place, platform::NPUPlace>)
       .def("_equals", &IsSamePlace<platform::Place, platform::CUDAPinnedPlace>)
+      .def("_equals", &IsSamePlace<platform::Place, platform::IntelGPUPlace>)
       .def("is_gpu_place",
            [](platform::Place &self) { return platform::is_gpu_place(self); })
       .def("is_cpu_place",
@@ -1810,6 +1857,8 @@ All parameter, weight, gradient are variables in Paddle.
            [](platform::Place &self) {
              return platform::is_cuda_pinned_place(self);
            })
+      .def("is_intel_gpu_place",
+           [](platform::Place &self) { return platform::is_intel_gpu_place(self); })
       .def("gpu_device_id",
            [](platform::Place &self) {
              return BOOST_GET_CONST(platform::CUDAPlace, self).device;
@@ -1817,6 +1866,10 @@ All parameter, weight, gradient are variables in Paddle.
       .def("xpu_device_id",
            [](platform::Place &self) {
              return BOOST_GET_CONST(platform::XPUPlace, self).device;
+           })
+      .def("intel_gpu_device_id",
+           [](platform::Place &self) {
+             return BOOST_GET_CONST(platform::IntelGPUPlace, self).device;
            })
       .def("npu_device_id",
            [](platform::Place &self) {
@@ -2059,6 +2112,7 @@ All parameter, weight, gradient are variables in Paddle.
   m.def("is_compiled_with_npu", IsCompiledWithNPU);
   m.def("is_compiled_with_xpu", IsCompiledWithXPU);
   m.def("is_compiled_with_mkldnn", IsCompiledWithMKLDNN);
+  m.def("is_compiled_with_intel_gpu", IsCompiledWithIntelGPU);
   m.def("_is_compiled_with_heterps", IsCompiledWithHETERPS);
   m.def("supports_bfloat16", SupportsBfloat16);
   m.def("supports_bfloat16_fast_performance", SupportsBfloat16FastPerformance);

@@ -826,6 +826,7 @@ class IntelGPUDeviceContext : public DeviceContext {
 
   const dnnl::engine& GetEngine();
   const dnnl::stream& GetStream();
+  const dpcpp::queue& GetDefaultQueue();
 
   // void WaitStreamCallback() const { return stream_->WaitCallback(); }
 
@@ -845,6 +846,7 @@ class IntelGPUDeviceContext : public DeviceContext {
   
   std::shared_ptr<dnnl::engine> curr_engine_;
   std::shared_ptr<dnnl::stream> curr_stream_;
+  std::shared_ptr<dpcpp::queue> default_queue_;
 
   DISABLE_COPY_AND_ASSIGN(IntelGPUDeviceContext);
 };

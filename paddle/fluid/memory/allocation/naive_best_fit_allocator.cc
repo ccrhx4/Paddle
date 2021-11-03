@@ -24,6 +24,7 @@
 #include "paddle/fluid/platform/gpu_info.h"
 #include "paddle/fluid/platform/npu_info.h"
 #include "paddle/fluid/platform/profiler.h"
+#include "paddle/fluid/platform/device_context.h"
 
 #include "paddle/fluid/string/printf.h"
 #include "paddle/fluid/string/split.h"
@@ -32,6 +33,9 @@
 #endif
 #ifdef PADDLE_WITH_XPU
 #include "paddle/fluid/platform/xpu/xpu_header.h"
+#endif
+#ifdef PADDLE_WITH_INTEL_GPU
+#include "paddle/fluid/platform/intelgpu/dpcpp.h"
 #endif
 
 DEFINE_bool(init_allocated_mem, false,
@@ -496,7 +500,14 @@ size_t Used<platform::IntelGPUPlace>(const platform::IntelGPUPlace &place) {
 template <>
 void* Alloc<platform::IntelGPUPlace>(const platform::IntelGPUPlace &place,
 		                     size_t size) {
-  PADDLE_THROW(platform::errors::PermissionDenied(
+#ifdef PADDLE_WITH_INTEL_GPU
+    auto* device_context = static_cast<platform::IntelGPUDeviceContext*>(platform::DeviceContextPool::Instance().Get(place));
+
+    auto default_queue = device_context->GetDefaultQueue();
+    void* ret = dpcpp::malloc_device(size, default_queue);
+    return ret;
+#endif
+      	PADDLE_THROW(platform::errors::PermissionDenied(
       "'IntelGPUPlace' is not yet supported."));
 }
 

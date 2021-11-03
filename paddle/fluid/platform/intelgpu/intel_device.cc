@@ -34,14 +34,14 @@ namespace platform {
 	return devices;
     }
 
-    int GetDeviceCount() {
+    int GetIntelGPUDeviceCount() {
         std::vector<dpcpp::device> all_gpus = GetAvailableDevices();
 	return all_gpus.size();
     }
 
     std::vector<int> GetIntelSelectedDevices() {
 	std::vector<int> devices;
-	int count = GetDeviceCount();
+	int count = GetIntelGPUDeviceCount();
         
 	for (int i = 0; i < count; ++i) {
              devices.push_back(i);

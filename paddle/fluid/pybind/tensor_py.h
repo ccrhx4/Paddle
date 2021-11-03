@@ -307,16 +307,12 @@ void SetTensorFromPyArrayT(
     }
   } else if (paddle::platform::is_intel_gpu_place(place)) {
 #ifdef PADDLE_WITH_INTEL_GPU
-    platform::Place tmp_place = place;
-    platform::XPUDeviceGuard guard(
-        BOOST_GET_CONST(platform::XPUPlace, tmp_place).device);
-    auto dst = self->mutable_data<T>(place);
-    xpu_memcpy(dst, array.data(), array.nbytes(),
-               XPUMemcpyKind::XPU_HOST_TO_DEVICE);  
+    //TODO: to implement memory copy
 #else
     PADDLE_THROW(platform::errors::PermissionDenied(
         "Cannot use XPUPlace in CPU/GPU version, "
         "Please recompile or reinstall Paddle with XPU support."));
+#endif
   } else if (paddle::platform::is_xpu_place(place)) {
 #ifdef PADDLE_WITH_XPU
     // NOTE(wangxi): When copying data to the accelerator card,

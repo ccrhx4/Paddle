@@ -36,6 +36,9 @@
 #include "paddle/fluid/platform/xpu/xpu_info.h"
 #endif
 #include "paddle/fluid/platform/npu_info.h"
+#ifdef PADDLE_WITH_INTEL_GPU
+#include "paddle/fluid/platform/intelgpu/intel_device.h"
+#endif
 
 DEFINE_int64(
     gpu_allocator_retry_time, 10000,
@@ -64,6 +67,11 @@ class AllocatorFacadePrivate {
           InitNaiveBestFitXPUAllocator(platform::XPUPlace(dev_id));
         }
 #endif
+#ifdef PADDLE_WITH_INTEL_GPU
+        for (int dev_id = 0; dev_id < platform::GetIntelGPUDeviceCount(); ++dev_id) {
+          InitNaiveBestFitIntelGPUAllocator(platform::IntelGPUPlace(dev_id));
+        }
+#endif
 #if defined(PADDLE_WITH_CUDA) || defined(PADDLE_WITH_HIP)
         for (int dev_id = 0; dev_id < platform::GetCUDADeviceCount();
              ++dev_id) {
@@ -87,6 +95,13 @@ class AllocatorFacadePrivate {
           InitNaiveBestFitXPUAllocator(platform::XPUPlace(dev_id));
         }
 #endif
+
+#ifdef PADDLE_WITH_INTEL_GPU
+        for (int dev_id = 0; dev_id < platform::GetIntelGPUDeviceCount(); ++dev_id) {
+          InitNaiveBestFitIntelGPUAllocator(platform::IntelGPUPlace(dev_id));
+        }
+#endif
+
 #if defined(PADDLE_WITH_CUDA) || defined(PADDLE_WITH_HIP)
         for (int dev_id = 0; dev_id < platform::GetCUDADeviceCount();
              ++dev_id) {
@@ -102,6 +117,11 @@ class AllocatorFacadePrivate {
 #ifdef PADDLE_WITH_XPU
         for (int dev_id = 0; dev_id < platform::GetXPUDeviceCount(); ++dev_id) {
           InitNaiveBestFitXPUAllocator(platform::XPUPlace(dev_id));
+        }
+#endif
+#ifdef PADDLE_WITH_INTEL_GPU
+        for (int dev_id = 0; dev_id < platform::GetIntelGPUDeviceCount(); ++dev_id) {
+          InitNaiveBestFitIntelGPUAllocator(platform::IntelGPUPlace(dev_id));
         }
 #endif
 #if defined(PADDLE_WITH_CUDA) || defined(PADDLE_WITH_HIP)
@@ -152,6 +172,13 @@ class AllocatorFacadePrivate {
       system_allocators_[p] = std::make_shared<NaiveBestFitAllocator>(p);
     }
 #endif
+#ifdef PADDLE_WITH_INTEL_GPU
+    int device_count = platform::GetIntelGPUDeviceCount();
+    for (int i = 0; i < device_count; ++i) {
+      platform::IntelGPUPlace p(i);
+      system_allocators_[p] = std::make_shared<NaiveBestFitAllocator>(p);
+    }
+#endif
 #if defined(PADDLE_WITH_CUDA) || defined(PADDLE_WITH_HIP)
     system_allocators_[platform::CUDAPinnedPlace()] =
         std::make_shared<CPUPinnedAllocator>();
@@ -191,6 +218,12 @@ class AllocatorFacadePrivate {
 
 #ifdef PADDLE_WITH_XPU
   void InitNaiveBestFitXPUAllocator(platform::XPUPlace p) {
+    allocators_[p] = std::make_shared<NaiveBestFitAllocator>(p);
+  }
+#endif
+
+#ifdef PADDLE_WITH_INTEL_GPU
+  void InitNaiveBestFitIntelGPUAllocator(platform::IntelGPUPlace p) {
     allocators_[p] = std::make_shared<NaiveBestFitAllocator>(p);
   }
 #endif
@@ -238,6 +271,12 @@ class AllocatorFacadePrivate {
     int device_count = platform::GetXPUDeviceCount();
     for (int dev_id = 0; dev_id < device_count; ++dev_id) {
       places.emplace_back(platform::XPUPlace(dev_id));
+    }
+#endif
+#ifdef PADDLE_WITH_INTEL_GPU
+    int device_count = platform::GetIntelGPUDeviceCount();
+    for (int dev_id = 0; dev_id < device_count; ++dev_id) {
+      places.emplace_back(platform::IntelGPUPlace(dev_id));
     }
 #endif
 #ifdef PADDLE_WITH_ASCEND_CL

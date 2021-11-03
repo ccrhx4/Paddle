@@ -222,6 +222,7 @@ void IntelGPUDeviceContext::Wait() const {}
 
 const dnnl::engine& IntelGPUDeviceContext::GetEngine() { return *curr_engine_; }
 const dnnl::stream& IntelGPUDeviceContext::GetStream() { return *curr_stream_; }
+const dpcpp::queue& IntelGPUDeviceContext::GetDefaultQueue() { return *default_queue_;}
 
 IntelGPUDeviceContext::~IntelGPUDeviceContext() {}
 
@@ -232,6 +233,7 @@ IntelGPUDeviceContext::IntelGPUDeviceContext(IntelGPUPlace place): place_(place)
 
     curr_context.reset(new dpcpp::context(curr_device));
     curr_engine_ = std::make_shared<dnnl::engine>(dnnl::sycl_interop::make_engine(curr_device, *curr_context));
+    default_queue_ = std::make_shared<dpcpp::queue>(dpcpp::queue(*curr_context, curr_device));
 }
 
 #endif

@@ -5,7 +5,7 @@
 namespace paddle {
 namespace platform {
     std::vector<dpcpp::device> GetAvailableDevices();
-    int GetDeviceCount();
+    int GetIntelGPUDeviceCount();
     std::vector<int> GetIntelSelectedDevices();
     void SetIntelGPUDeviceId(int device_id);
 }
